@@ -1,0 +1,120 @@
+#include <iomanip>
+#include <iostream>
+#include <vector>
+#include <set>
+
+using namespace std;
+
+const int INF = 1e9;
+
+struct Edge {
+    int curVert, toVert, flow, capacity, weight;
+};
+
+void addEdge (vector<Edge>& edges, vector<vector<int>>& graph, int curV, int toV, int cap, int weight) {
+    edges.push_back({curV, toV, 0, cap, weight});
+    edges.push_back({toV, curV, 0, 0, -weight});
+    edges.push_back({toV, curV, 0, cap, weight});
+    edges.push_back({curV, toV, 0, 0, -weight});
+    graph[curV].push_back(edges.size() - 4);
+    graph[toV].push_back(edges.size() - 3);
+    graph[toV].push_back(edges.size() - 2);
+    graph[curV].push_back(edges.size() - 1);
+}
+
+int addFlow (int n, vector<Edge>& edges,vector<vector<int>>& graph, vector<int>& pot) {
+    int addFl = 0;
+    int source = 0, sink = n - 1;
+    vector<int> path(n);
+    set<pair<int,int>> dijkstraSet;
+    vector<int> dist(n, INF);
+    dist[source] = 0;
+    dijkstraSet.insert({0, source});
+    while(!dijkstraSet.empty()) {
+        auto curPair = *dijkstraSet.begin();
+        dijkstraSet.erase(curPair);
+        int curV = curPair.second;
+        for (int numEd : graph[curV]) {
+            Edge ed = edges[numEd];
+            if (ed.flow < ed.capacity) {
+                int nextV = ed.toVert;
+                int weight = ed.weight + pot[curV] - pot[nextV];
+                if(dist[nextV] > dist[curV] + weight) {
+                    dijkstraSet.erase({dist[nextV], nextV});
+                    dist[nextV] = dist[curV] + weight;
+                    path[nextV] = numEd;
+                    dijkstraSet.insert({dist[nextV], nextV});
+                }
+            }
+        }
+    }
+    for (int i = 0; i < n; ++i)
+        pot[i] = dist[i];
+
+    int cur = sink;
+    while(cur != source) {
+        int prev = path[cur];
+        if(edges[prev].flow == edges[prev].capacity)
+            return -1;
+        ++edges[prev].flow;
+        --edges[prev ^ 1].flow;
+        addFl += edges[prev].weight;
+        cur = edges[prev].curVert;
+    }
+
+    return addFl;
+}
+
+int main() {
+    ios::sync_with_stdio(true);
+
+    int n_vert, m_edge, k_flow;
+    cin >> n_vert >> m_edge >> k_flow;
+    int source = 0, sink = n_vert - 1;
+    vector<vector<int>> graph(n_vert, vector<int> ());
+    vector<Edge> edges;
+    for (int i = 0; i < m_edge; ++i) {
+        int v, u, w;
+        cin >> v >> u >> w;
+        addEdge(edges, graph, --v, --u, 1, w);
+    }
+
+    vector<int> pot(n_vert);
+    int minCost = 0, fl;
+    for(int i = 0; i < k_flow; ++i) {
+        fl = addFlow(n_vert, edges, graph, pot);
+        if(fl == -1)
+            break;
+        minCost += fl;
+    }
+
+    if (fl == -1)
+        cout << -1;
+    else {
+        cout << fixed << setprecision(6) << 1.0 * minCost / k_flow <<'\n';
+
+        vector<vector<pair<int, int>>> path_flow(n_vert, vector<pair<int, int>>());
+        for (int i = 0; i < 4 * m_edge; ++i) {
+            if(edges[i].flow > 0)
+                path_flow[edges[i].curVert].push_back({edges[i].toVert, i / 4 + 1});
+        }
+
+        vector<int> pos(n_vert);
+        for (int i = 0; i < k_flow; ++i) {
+            int cur = source;
+            vector<int> path_i;
+            while(cur != sink) {
+                path_i.push_back(path_flow[cur][pos[cur]].second);
+                cur = path_flow[cur][pos[cur]++].first;
+            }
+
+            cout << path_i.size() << ' ';
+            for (int j : path_i) {
+                cout << j << ' ';
+            }
+            cout << '\n';
+        }
+    }
+
+    return 0;
+}
