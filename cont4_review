@@ -3,15 +3,13 @@
 #include <vector>
 #include <set>
 
-using namespace std;
-
-const int INF = 1e9;
+static constexpr int INF = std::numeric_limits<int>::max();
 
 struct Edge {
     int curVert, toVert, flow, capacity, weight;
 };
 
-void addEdge (vector<Edge>& edges, vector<vector<int>>& graph, int curV, int toV, int cap, int weight) {
+void addEdge (std::vector<Edge>& edges, std::vector<std::vector<int>>& graph, int curV, int toV, int cap, int weight) {
     edges.push_back({curV, toV, 0, cap, weight});
     edges.push_back({toV, curV, 0, 0, -weight});
     edges.push_back({toV, curV, 0, cap, weight});
@@ -22,12 +20,12 @@ void addEdge (vector<Edge>& edges, vector<vector<int>>& graph, int curV, int toV
     graph[curV].push_back(edges.size() - 1);
 }
 
-int addFlow (int n, vector<Edge>& edges,vector<vector<int>>& graph, vector<int>& pot) {
+int addFlow (int n, std::vector<Edge>& edges,std::vector<std::vector<int>>& graph, std::vector<int>& pot) {
     int addFl = 0;
     int source = 0, sink = n - 1;
-    vector<int> path(n);
-    set<pair<int,int>> dijkstraSet;
-    vector<int> dist(n, INF);
+    std::vector<int> path(n);
+    std::set<std::pair<int,int>> dijkstraSet;
+    std::vector<int> dist(n, INF);
     dist[source] = 0;
     dijkstraSet.insert({0, source});
     while(!dijkstraSet.empty()) {
@@ -48,14 +46,16 @@ int addFlow (int n, vector<Edge>& edges,vector<vector<int>>& graph, vector<int>&
             }
         }
     }
-    for (int i = 0; i < n; ++i)
+    for (int i = 0; i < n; ++i) {
         pot[i] = dist[i];
+    }
 
     int cur = sink;
     while(cur != source) {
         int prev = path[cur];
-        if(edges[prev].flow == edges[prev].capacity)
+        if(edges[prev].flow == edges[prev].capacity) {
             return -1;
+        }
         ++edges[prev].flow;
         --edges[prev ^ 1].flow;
         addFl += edges[prev].weight;
@@ -65,56 +65,71 @@ int addFlow (int n, vector<Edge>& edges,vector<vector<int>>& graph, vector<int>&
     return addFl;
 }
 
-int main() {
-    ios::sync_with_stdio(true);
-
-    int n_vert, m_edge, k_flow;
-    cin >> n_vert >> m_edge >> k_flow;
-    int source = 0, sink = n_vert - 1;
-    vector<vector<int>> graph(n_vert, vector<int> ());
-    vector<Edge> edges;
+void read(int& n_vert, int& m_edge, int& k_flow, int& source, int& sink, std::vector<std::vector<int>>& graph,
+          std::vector<Edge>& edges) {
+    std::cin >> n_vert >> m_edge >> k_flow;
+    graph.resize(n_vert);
+    source = 0, sink = n_vert - 1;
     for (int i = 0; i < m_edge; ++i) {
         int v, u, w;
-        cin >> v >> u >> w;
+        std::cin >> v >> u >> w;
         addEdge(edges, graph, --v, --u, 1, w);
     }
+}
 
-    vector<int> pot(n_vert);
-    int minCost = 0, fl;
+void min_cost_flow (int n_vert, int& fl, int& minCost, int k_flow, std::vector<std::vector<int>>& graph,
+                    std::vector<Edge>& edges) {
+    std::vector<int> pot(n_vert);
+    minCost = 0;
     for(int i = 0; i < k_flow; ++i) {
         fl = addFlow(n_vert, edges, graph, pot);
-        if(fl == -1)
+        if(fl == -1) {
             break;
+        }
         minCost += fl;
     }
+}
 
-    if (fl == -1)
-        cout << -1;
+void out (int fl, int minCost, int k_flow, int n_vert, int m_edge, std::vector<Edge> edges, int source, int sink) {
+    if (fl == -1) {
+        std::cout << -1;
+    }
     else {
-        cout << fixed << setprecision(6) << 1.0 * minCost / k_flow <<'\n';
+        std::cout << std::fixed << std::setprecision(6) << 1.0 * minCost / k_flow <<'\n';
 
-        vector<vector<pair<int, int>>> path_flow(n_vert, vector<pair<int, int>>());
+        std::vector<std::vector<std::pair<int, int>>> path_flow(n_vert, std::vector<std::pair<int, int>>());
         for (int i = 0; i < 4 * m_edge; ++i) {
-            if(edges[i].flow > 0)
+            if(edges[i].flow > 0) {
                 path_flow[edges[i].curVert].push_back({edges[i].toVert, i / 4 + 1});
+            }
         }
 
-        vector<int> pos(n_vert);
+        std::vector<int> pos(n_vert);
         for (int i = 0; i < k_flow; ++i) {
             int cur = source;
-            vector<int> path_i;
+            std::vector<int> path_i;
             while(cur != sink) {
                 path_i.push_back(path_flow[cur][pos[cur]].second);
                 cur = path_flow[cur][pos[cur]++].first;
             }
 
-            cout << path_i.size() << ' ';
+            std::cout << path_i.size() << ' ';
             for (int j : path_i) {
-                cout << j << ' ';
+                std::cout << j << ' ';
             }
-            cout << '\n';
+            std::cout << '\n';
         }
     }
+}
+
+int main() {
+    int n_vert, m_edge, k_flow, source, sink, minCost, fl;
+    std::vector<std::vector<int>> graph;
+    std::vector<Edge> edges;
+
+    read(n_vert, m_edge, k_flow, source, sink, graph, edges);
+    min_cost_flow(n_vert, fl, minCost, k_flow, graph, edges);
+    out(fl, minCost, k_flow, n_vert, m_edge, edges, source, sink);
 
     return 0;
 }
